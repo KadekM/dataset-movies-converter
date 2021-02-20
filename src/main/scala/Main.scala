@@ -33,6 +33,8 @@ object Main extends App {
     .foreach {
       case Left(x) => ()
       case Right(x) =>
+        out.write(Json.obj("index" -> Json.obj("_id" -> Json.fromLong(x.id))).printWith(Printer.noSpaces))
+        out.write("\n")
         out.write(x.asJson.printWith(Printer.noSpaces))
         out.write("\n")
     }
