@@ -33,7 +33,7 @@ object Main extends App {
     .foreach {
       case Left(x) => ()
       case Right(x) =>
-        out.write(x.asJson.printWith(Printer.spaces2))
+        out.write(x.asJson.printWith(Printer.noSpaces))
         out.write("\n")
     }
   out.close()
