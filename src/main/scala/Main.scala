@@ -36,6 +36,7 @@ object Main extends App {
 
   val outRaw = new PrintWriter(new File("movies.json"))
   val outCompletion = new PrintWriter(new File("movies_completion.json"))
+  val outContext = new PrintWriter(new File("movies_context.json"))
   val rawData = getClass.getResource("/movies_metadata.csv")
   val reader = rawData.asCsvReader[Movie](rfc.withHeader.withCellSeparator(',').withQuote('"'))
     .foreach {
@@ -48,10 +49,20 @@ object Main extends App {
 
         outCompletion.write(Json.obj("index" -> Json.obj("_id" -> Json.fromLong(x.id))).printWith(Printer.noSpaces))
         outCompletion.write("\n")
-        val fields = generate(x.title).map(Json.fromString)
-        val newJson = x.asJson.mapObject(x => x.add("title_completion", Json.arr(fields: _*)))
-        outCompletion.write(newJson.printWith(Printer.noSpaces))
+        val completions = generate(x.title).map(Json.fromString)
+        val completionjson = x.asJson.mapObject(x => x.add("title_completion", Json.arr(completions: _*)))
+        outCompletion.write(completionjson.printWith(Printer.noSpaces))
         outCompletion.write("\n")
+
+        outContext.write(Json.obj("index" -> Json.obj("_id" -> Json.fromLong(x.id))).printWith(Printer.noSpaces))
+        outContext.write("\n")
+        val contexts = Json.obj(
+          "movie_category" -> x.genres.mapArray(_.flatMap(_ \\ "name"))
+        )
+        val contextJson = x.asJson.mapObject(x => x.add("title_completion",
+          Json.obj("input" -> Json.arr(completions: _*), "contexts" -> contexts)))
+        outContext.write(contextJson.printWith(Printer.noSpaces))
+        outContext.write("\n")
     }
 
   outRaw.close()
