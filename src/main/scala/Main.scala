@@ -15,6 +15,13 @@ case class Movie(adult: Boolean, belongs_to_collection: Json, budget: Long, genr
 
 object Main extends App {
 
+  def generate(s: String): List[String] = {
+    s.split(" ").map(_.filter(_.isLetterOrDigit)).foldRight(("", List.empty[String])) { case (x, (prev, res)) =>
+      val together = s"$x $prev".trim
+      (together, together :: res)
+    }._2
+  }
+
   implicit val jsonCellDecoder: CellDecoder[Json] = CellDecoder[String]
     .emap { x =>
       if (x.isEmpty) Right(Json.Null)
@@ -27,18 +34,27 @@ object Main extends App {
       }
     }
 
-  val out = new PrintWriter(new File("movies.json"))
+  val outRaw = new PrintWriter(new File("movies.json"))
+  val outCompletion = new PrintWriter(new File("movies_completion.json"))
   val rawData = getClass.getResource("/movies_metadata.csv")
   val reader = rawData.asCsvReader[Movie](rfc.withHeader.withCellSeparator(',').withQuote('"'))
     .foreach {
       case Left(x) => ()
       case Right(x) =>
-        out.write(Json.obj("index" -> Json.obj("_id" -> Json.fromLong(x.id))).printWith(Printer.noSpaces))
-        out.write("\n")
-        out.write(x.asJson.printWith(Printer.noSpaces))
-        out.write("\n")
-    }
-  out.close()
-  println("done")
+        outRaw.write(Json.obj("index" -> Json.obj("_id" -> Json.fromLong(x.id))).printWith(Printer.noSpaces))
+        outRaw.write("\n")
+        outRaw.write(x.asJson.printWith(Printer.noSpaces))
+        outRaw.write("\n")
 
+        outCompletion.write(Json.obj("index" -> Json.obj("_id" -> Json.fromLong(x.id))).printWith(Printer.noSpaces))
+        outCompletion.write("\n")
+        val fields = generate(x.title).map(Json.fromString)
+        val newJson = x.asJson.mapObject(x => x.add("title_completion", Json.arr(fields: _*)))
+        outCompletion.write(newJson.printWith(Printer.noSpaces))
+        outCompletion.write("\n")
+    }
+
+  outRaw.close()
+  outCompletion.close()
+  println("done")
 }
